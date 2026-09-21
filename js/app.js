@@ -2,10 +2,19 @@
 
 const API_BASE_URL = "https://pokeapi.co/api/v2";
 const DEFAULT_POKEMON_COUNT = 12;
-const MAX_POKEMON_COUNT = 150;
+const FALLBACK_MAX_POKEMON_COUNT = 1351;
+const ALL_POKEMON_LIMIT = 100000;
+const SUGGESTION_LIMIT = 10;
+
+// Total real de Pokémon disponibles (incluye formas); se actualiza con la API.
+let availablePokemonCount = FALLBACK_MAX_POKEMON_COUNT;
+
+// Nombres de todos los Pokémon para las sugerencias de búsqueda.
+let allPokemonNames = [];
 
 const searchForm = document.getElementById("search-form");
 const searchInput = document.getElementById("search-input");
+const suggestionsElement = document.getElementById("suggestions");
 const countInput = document.getElementById("pokemon-count");
 const loadButton = document.getElementById("load-button");
 const evolutionToggle = document.getElementById("show-evolutions-toggle");
@@ -75,13 +84,13 @@ async function fetchPokemonByName(name) {
   return handleApiResponse(response);
 }
 
-// Obtiene un Pokémon específico por id desde la PokéAPI.
-async function fetchPokemonById(id) {
-  const response = await fetch(`${API_BASE_URL}/pokemon/${id}`);
+// Obtiene un Pokémon específico desde una URL ya dada.
+async function fetchPokemonByUrl(url) {
+  const response = await fetch(url);
   return handleApiResponse(response);
 }
 
-// Obtiene la lista de Pokémon (se usa para conocer el total disponible).
+// Obtiene la lista de Pokémon (se usa para conocer el total y muestrear).
 async function fetchPokemonList(limit) {
   const response = await fetch(`${API_BASE_URL}/pokemon?limit=${limit}`);
   return handleApiResponse(response);
@@ -195,23 +204,20 @@ async function fetchEvolutions(pokemonList) {
   return new Map(entries);
 }
 
-// Devuelve la cantidad total de especies (ids 1..1025, sin huecos).
-// Se usa el endpoint de especies porque /pokemon incluye formas con ids no
-// consecutivos, lo que haría fallar los ids aleatorios con errores 404.
-async function getTotalPokemonCount() {
-  const response = await fetch(`${API_BASE_URL}/pokemon-species?limit=1`);
-  const data = await handleApiResponse(response);
-  return data.count;
+// Elige count entradas al azar (sin repetir) de una lista.
+function getRandomItems(items, count) {
+  const total = Math.min(count, items.length);
+  const indexes = new Set();
+  while (indexes.size < total) {
+    indexes.add(Math.floor(Math.random() * items.length));
+  }
+  return [...indexes].map((index) => items[index]);
 }
 
-// Genera ids aleatorios únicos dentro del rango disponible.
-function getRandomUniqueIds(count, max) {
-  const total = Math.min(count, max);
-  const ids = new Set();
-  while (ids.size < total) {
-    ids.add(Math.floor(Math.random() * max) + 1);
-  }
-  return [...ids];
+// Devuelve los nombres de todos los Pokémon (para las sugerencias).
+async function fetchAllPokemonNames() {
+  const data = await fetchPokemonList(ALL_POKEMON_LIMIT);
+  return data.results.map((item) => item.name);
 }
 
 // Lee y valida la cantidad de Pokémon elegida por el usuario.
@@ -220,7 +226,7 @@ function getInitialCount() {
   if (Number.isNaN(value)) {
     return DEFAULT_POKEMON_COUNT;
   }
-  return Math.min(Math.max(value, 1), MAX_POKEMON_COUNT);
+  return Math.min(Math.max(value, 1), availablePokemonCount);
 }
 
 // Renderizado del DOM
@@ -458,6 +464,7 @@ async function loadInitialPokemon() {
 
   // Limpia el campo de búsqueda y los filtros para que actúe como reinicio.
   searchInput.value = "";
+  hideSuggestions();
   typeFilter.value = "";
   generationFilter.value = "";
 
@@ -465,9 +472,12 @@ async function loadInitialPokemon() {
   setControlsDisabled(true);
   isRequestInProgress = true;
   try {
-    const total = await getTotalPokemonCount();
-    const ids = getRandomUniqueIds(getInitialCount(), total);
-    const details = await Promise.all(ids.map((id) => fetchPokemonById(id)));
+    const list = await fetchPokemonList(ALL_POKEMON_LIMIT);
+    allPokemonNames = list.results.map((item) => item.name);
+    availablePokemonCount = list.results.length;
+    countInput.max = availablePokemonCount;
+    const selected = getRandomItems(list.results, getInitialCount());
+    const details = await Promise.all(selected.map((item) => fetchPokemonByUrl(item.url)));
     const pokemonList = await Promise.all(details.map(fetchAndMapPokemon));
     await fetchAndRender(pokemonList);
   } catch (error) {
@@ -483,6 +493,8 @@ async function loadInitialPokemon() {
 // Búsqueda por nombre: normaliza la entrada y consulta la API.
 async function handleSearch(event) {
   event.preventDefault();
+
+  hideSuggestions();
 
   if (isRequestInProgress) {
     return;
@@ -603,11 +615,85 @@ function handleStatsToggle() {
   renderCurrentList();
 }
 
+// Sugerencias de búsqueda por nombre.
+
+// Maneja la escritura en el campo de búsqueda y muestra sugerencias.
+async function handleSearchInput() {
+  const query = normalizeQuery(searchInput.value);
+
+  if (!query) {
+    hideSuggestions();
+    return;
+  }
+
+  // Carga los nombres una sola vez (si aún no están disponibles).
+  if (allPokemonNames.length === 0) {
+    try {
+      allPokemonNames = await fetchAllPokemonNames();
+    } catch (error) {
+      console.error("Error al cargar las sugerencias:", error);
+      return;
+    }
+  }
+
+  const matches = allPokemonNames
+    .filter((name) => name.startsWith(query))
+    .slice(0, SUGGESTION_LIMIT);
+
+  if (matches.length === 0) {
+    hideSuggestions();
+    return;
+  }
+
+  renderSuggestions(matches);
+}
+
+// Renderiza la lista de sugerencias bajo el campo de búsqueda.
+function renderSuggestions(matches) {
+  suggestionsElement.innerHTML = "";
+
+  matches.forEach((name) => {
+    const item = document.createElement("li");
+    item.classList.add("suggestions__item");
+    item.setAttribute("role", "option");
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.classList.add("suggestions__button");
+    button.textContent = name;
+    // mousedown se dispara antes que blur, garantizando que el clic se registre.
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      selectSuggestion(name);
+    });
+
+    item.appendChild(button);
+    suggestionsElement.appendChild(item);
+  });
+
+  suggestionsElement.hidden = false;
+}
+
+// Al elegir una sugerencia se rellena el campo y se ejecuta la búsqueda.
+function selectSuggestion(name) {
+  searchInput.value = name;
+  hideSuggestions();
+  searchForm.requestSubmit();
+}
+
+// Oculta y vacía la lista de sugerencias.
+function hideSuggestions() {
+  suggestionsElement.hidden = true;
+  suggestionsElement.innerHTML = "";
+}
+
 // Inicialización
 
 populateTypeFilter();
 populateGenerationFilter();
 searchForm.addEventListener("submit", handleSearch);
+searchInput.addEventListener("input", handleSearchInput);
+searchInput.addEventListener("blur", () => setTimeout(hideSuggestions, 150));
 loadButton.addEventListener("click", loadInitialPokemon);
 evolutionToggle.addEventListener("change", handleEvolutionToggle);
 statsToggle.addEventListener("change", handleStatsToggle);

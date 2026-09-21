@@ -19,6 +19,8 @@ nombre y los tipos del Pokémon, todo renderizado dinámicamente desde JavaScrip
 
 * Carga inicial de al menos 12 Pokémon con imagen, nombre y tipos.
 * Búsqueda de Pokémon por nombre (ignora espacios y mayúsculas/minúsculas).
+* Sugerencias de búsqueda: al escribir se muestran nombres que coinciden
+  (incluye formas alternas como `sandshrew-alola` o `pikachu-gmax`).
 * Búsqueda ejecutable con el botón "Buscar" o presionando `Enter`.
 * Mensajes de error amigables para búsquedas vacías, Pokémon inexistentes y
   errores de conexión.
@@ -30,15 +32,16 @@ nombre y los tipos del Pokémon, todo renderizado dinámicamente desde JavaScrip
 * Nivel de poder (suma de las 6 estadísticas base).
 * Las 6 estadísticas base (PS, Ataque, Defensa, At. Esp., Def. Esp., Velocidad).
 * Carga inicial con Pokémon aleatorios.
-* Elegir la cantidad de Pokémon a mostrar al inicio (1–150). El botón "Cargar"
-  recarga la lista con esa cantidad y limpia la búsqueda (integra el
-  comportamiento del antiguo botón "Mostrar todos").
+* Elegir la cantidad de Pokémon a mostrar al inicio (1–1351, incluye formas
+  alternas). El botón "Cargar" recarga la lista con esa cantidad y limpia la
+  búsqueda (integra el comportamiento del antiguo botón "Mostrar todos").
 * Toggle "Mostrar evoluciones" que muestra la línea evolutiva como mini
   tarjetas una al lado de la otra, con flechas indicando la dirección.
 * Toggle "Mostrar estadísticas" que muestra u oculta el poder total y las 6
   estadísticas base de cada tarjeta.
-* Filtro por tipo para mostrar solo los Pokémon de un tipo de la lista cargada.
-* Filtro por generación (I–IX) para mostrar solo los Pokémon de una generación.
+* Filtro por tipo para mostrar solo los Pokémon de un tipo de la muestra cargada.
+* Filtro por generación (I–IX) para mostrar solo los Pokémon de una generación
+  de la muestra cargada.
 * Contador de Pokémon mostrados.
 * Animación de aparición de las tarjetas.
 
@@ -105,3 +108,11 @@ y luego abrir `http://localhost:8000`.
 * **Animación de aparición**: las tarjetas aparecen con una transición suave.
 * **Bloqueo de búsquedas simultáneas**: evita ejecutar varias peticiones a la
   vez para mantener la interfaz consistente.
+
+## Atribución y aviso legal
+
+* Los datos se obtienen de [PokéAPI](https://pokeapi.co).
+* Pokémon y todos los nombres, imágenes y personajes relacionados son marcas y
+  propiedad de Nintendo / Game Freak / The Pokémon Company.
+* Este proyecto es **educativo y sin fines comerciales**; no está afiliado,
+  respaldado ni aprobado por Nintendo, Game Freak o The Pokémon Company.

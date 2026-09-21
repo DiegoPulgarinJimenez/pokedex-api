@@ -24,13 +24,16 @@
       <form id="search-form" class="search__form" novalidate>
         <div class="search__field">
           <label class="search__label" for="search-input">Busca por nombre del Pokémon</label>
-          <input
-            id="search-input"
-            class="search__input"
-            type="search"
-            placeholder="Ej. pikachu"
-            autocomplete="off"
-          />
+          <div class="search__autocomplete">
+            <input
+              id="search-input"
+              class="search__input"
+              type="search"
+              placeholder="Ej. pikachu"
+              autocomplete="off"
+            />
+            <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+          </div>
         </div>
         <button type="submit" class="btn btn--primary">Buscar</button>
 
@@ -41,7 +44,7 @@
             class="search__input"
             type="number"
             min="1"
-            max="150"
+            max="1351"
             value="12"
           />
         </div>
@@ -93,6 +96,12 @@
       Datos obtenidos de
       <a href="https://pokeapi.co" target="_blank" rel="noopener noreferrer">PokéAPI</a>.
       Proyecto construido con HTML, CSS y JavaScript.
+    </p>
+    <p>
+      Pokémon y todos los nombres, imágenes y personajes relacionados son marcas
+      y propiedad de Nintendo / Game Freak / The Pokémon Company. Este es un
+      proyecto educativo sin fines comerciales y no está afiliado, respaldado ni
+      aprobado por sus propietarios.
     </p>
   </footer>
 
